@@ -33,6 +33,7 @@ int main()
 	struct epoll_event ep_event;
 	struct epoll_event ep_events[10];
 	char buf[BUFSIZ];
+	char send_buf[24];
 
 	if ((_sSock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
 		printf("establish socket failed\n");
@@ -41,7 +42,7 @@ int main()
 	printf("establish socket success, <socket=%d>\n", _sSock);
 
 	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(20201);
+	serv_addr.sin_port = htons(20202);
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
 	bzero(&(serv_addr.sin_zero), 8);
 	_sockLen = sizeof(struct sockaddr_in);
@@ -74,9 +75,10 @@ int main()
 
 		for (i = 0; i < fd_num; i++) {
 
-			_cSock = accept(_sSock, (struct sockaddr*)&client_addr, (socklen_t *)&_sockLen);
 			// new client join
 			if (_sSock == ep_events[i].data.fd) {
+
+				_cSock = accept(_sSock, (struct sockaddr*)&client_addr, (socklen_t *)&_sockLen);
 				if (-1 == _cSock) {
 					printf("accept failure\n");
 					continue;
@@ -108,11 +110,13 @@ int main()
 
 				// send msg
 			} else if (ep_events[i].events & EPOLLOUT) {
-				_cSock = ep_events[i].data.fd;
-				rest = send(_cSock, buf, BUFSIZ, 0);
+
+				memset(send_buf, 0x00, sizeof(send_buf));
+				strcpy(send_buf, "Hello, This is Server");
+				rest = send(_cSock, send_buf, sizeof(send_buf), 0);
 
 				ep_event.events = EPOLLIN;
-				ep_event.events = _cSock;
+				ep_event.data.fd = _cSock;
 				epoll_ctl(epfd, EPOLL_CTL_MOD, _cSock, &ep_event);
 			}
 
